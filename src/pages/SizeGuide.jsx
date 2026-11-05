@@ -1,6 +1,13 @@
+import Seo from '../components/Seo';
+
 export default function SizeGuide() {
   return (
     <main className="pt-24 pb-16 min-h-[80vh]">
+      <Seo
+        title="Size Guide"
+        path="/size-guide"
+        description="Find your perfect fit with our detailed shoe size guide and conversion chart."
+      />
       <div className="container-main max-w-3xl">
         <h1 className="text-3xl font-light tracking-tight mb-8">Size Guide</h1>
         <p className="text-neutral-500 mb-8">

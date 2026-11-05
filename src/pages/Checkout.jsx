@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { HiOutlineShieldCheck, HiOutlineLockClosed } from 'react-icons/hi';
 import toast from 'react-hot-toast';
+import Seo from '../components/Seo';
+import { calcTotals, livePrice, isCartLineUnavailable } from '../utils/pricing';
 
 const formatINR = (n) => '₹' + Number(n).toLocaleString('en-IN');
 
@@ -11,7 +13,11 @@ export default function Checkout() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [processing, setProcessing] = useState(false);
+  const [gatewayError, setGatewayError] = useState(false);
+  const [timeoutTriggered, setTimeoutTriggered] = useState(false);
   const idempotencyKeyRef = useRef(null);
+  const checkoutInitiatedRef = useRef(false);
+  const timeoutRef = useRef(null);
   
   useEffect(() => {
     if (!idempotencyKeyRef.current) {
@@ -21,10 +27,20 @@ export default function Checkout() {
         sessionStorage.setItem('mj_idempotency_key', savedKey);
       }
       idempotencyKeyRef.current = savedKey;
+      idempotencyKeyRef.current = savedKey;
     }
+
+    return () => {
+      // Cart Abandonment Metric Fire natively when module tears down organically without success flag
+      if (!window.location.pathname.includes('order-success') && checkoutInitiatedRef.current) {
+        // Send isolated beacon payload cleanly dodging CORS/unmount blockers
+        navigator.sendBeacon('/api/metrics/abandonment', JSON.stringify({ sessionTag: idempotencyKeyRef.current }));
+      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
-  const [paymentMethod, setPaymentMethod] = useState('stripe');
+  const [paymentMethod, setPaymentMethod] = useState('razorpay');
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '', phone: '',
     address: '', city: '', state: '', zip: '', country: '',
@@ -33,6 +49,7 @@ export default function Checkout() {
   if (!state.user) {
     return (
       <main className="pt-16">
+        <Seo title="Checkout" path="/checkout" noindex />
         <div className="container-main py-20 text-center">
           <p className="text-neutral-400 text-sm mb-4">Please sign in to checkout.</p>
           <Link to="/login" className="btn-primary text-xs">Sign In</Link>
@@ -41,12 +58,7 @@ export default function Checkout() {
     );
   }
 
-  const subtotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discountOffset = state.coupon ? state.coupon.discount : 0;
-  const discountedSubtotal = subtotal - discountOffset;
-  const shipping = subtotal >= 15000 ? 0 : 499;
-  const tax = Math.round(discountedSubtotal * 0.18);
-  const total = discountedSubtotal + shipping + tax;
+  const { subtotal, discount: discountOffset, shipping, tax, total } = calcTotals(state.cart, state.products, state.coupon);
 
   const updateField = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -61,7 +73,21 @@ export default function Checkout() {
   };
 
   const handlePlaceOrder = async () => {
+    if (state.cart.some(item => isCartLineUnavailable(item, state.products, state.loading))) {
+      toast.error('Some items in your bag are no longer available — remove them first', { style: { fontSize: '13px' } });
+      navigate('/cart');
+      return;
+    }
+    setGatewayError(false);
+    setTimeoutTriggered(false);
     setProcessing(true);
+    checkoutInitiatedRef.current = true;
+    
+    // Explicit 15s Gateway Timeout UX boundary
+    timeoutRef.current = setTimeout(() => {
+        setTimeoutTriggered(true);
+    }, 15000);
+
     try {
       const { auth } = await import('../firebase');
       const user = auth.currentUser;
@@ -83,6 +109,7 @@ export default function Checkout() {
       const items = state.cart.map(item => ({
         productId: item.id || item._id,
         size: item.size,
+        sizeType: item.sizeType || 'UK',
         quantity: item.quantity,
       }));
 
@@ -114,7 +141,7 @@ export default function Checkout() {
         key: createData.key,
         amount: createData.amount,
         currency: createData.currency,
-        name: 'MJ Store',
+        name: 'MJ Shoes',
         description: 'Premium Footwear',
         order_id: createData.orderId,
         handler: async function (response) {
@@ -151,6 +178,7 @@ export default function Checkout() {
                     image: i.image,
                     price: i.price,
                     size: i.size,
+                    sizeType: i.sizeType || 'UK',
                     quantity: i.quantity,
                   })),
                   totalAmount: total,
@@ -160,7 +188,7 @@ export default function Checkout() {
                 },
               });
               toast.success('Payment successful! Order confirmed.', { style: { fontSize: '13px' } });
-              navigate('/order-success');
+              navigate(`/order-success?orderId=${verifyData.orderId}`);
             } else {
               toast.error(verifyData.error || 'Payment verification failed', { style: { fontSize: '13px' } });
             }
@@ -186,10 +214,21 @@ export default function Checkout() {
         },
       };
 
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setTimeoutTriggered(false);
+
+      if (!window.Razorpay) {
+        toast.error('Gateway blocked remotely (Check AdBlocker/Connection)');
+        setGatewayError(true);
+        setProcessing(false);
+        return;
+      }
+
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (response) {
         console.error('Razorpay Modal Triggered Event: payment.failed:', response.error);
         toast.error('Payment failed. Please try again.', { style: { fontSize: '13px' } });
+        setGatewayError(true);
         setProcessing(false);
       });
       console.log('8. rzp.open() commanded');
@@ -204,6 +243,7 @@ export default function Checkout() {
   if (state.cart.length === 0) {
     return (
       <main className="pt-16">
+        <Seo title="Checkout" path="/checkout" noindex />
         <div className="container-main py-20 text-center">
           <p className="text-neutral-400 text-sm mb-4">Your bag is empty.</p>
           <Link to="/shop" className="btn-primary text-xs">Shop Now</Link>
@@ -214,6 +254,7 @@ export default function Checkout() {
 
   return (
     <main className="pt-16">
+      <Seo title="Checkout" path="/checkout" noindex />
       <div className="container-main py-12 md:py-16">
         <h1 className="text-3xl font-light tracking-tight mb-2">Checkout</h1>
         <p className="text-sm text-neutral-400 mb-10">
@@ -277,7 +318,6 @@ export default function Checkout() {
 
                 <div className="space-y-3 mb-8">
                   {[
-                    { id: 'stripe', label: 'Credit / Debit Card', sub: 'Powered by Stripe' },
                     { id: 'razorpay', label: 'Razorpay', sub: 'UPI, Cards, Net Banking' },
                   ].map(method => (
                     <button
@@ -306,18 +346,32 @@ export default function Checkout() {
                   <span>Your payment information is encrypted and secure.</span>
                 </div>
 
-                <div className="flex gap-4">
-                  <button onClick={() => setStep(1)} className="btn-outline" id="back-to-shipping" disabled={processing}>
-                    Back
-                  </button>
-                  <button
-                    onClick={handlePlaceOrder}
-                    disabled={processing}
-                    className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                    id="place-order"
-                  >
-                    {processing ? 'Processing...' : `Place Order — ${formatINR(total)}`}
-                  </button>
+                <div className="flex flex-col gap-4">
+                  {gatewayError && (
+                    <div className="bg-red-50 text-red-700 p-3 text-xs border border-red-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <span>Payment didn't go through — you have not been charged for it. Try again or use another method.</span>
+                      <button onClick={() => window.location.reload()} className="underline font-medium hover:text-red-900 text-left sm:text-right">Reload Page</button>
+                    </div>
+                  )}
+                  {timeoutTriggered && processing && (
+                    <div className="bg-orange-50 text-orange-700 p-3 text-xs border border-orange-100">
+                      Processing is taking longer than expected. Please do not close the window.
+                    </div>
+                  )}
+
+                  <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4">
+                    <button onClick={() => setStep(1)} className="btn-outline" id="back-to-shipping" disabled={processing}>
+                      Back
+                    </button>
+                    <button
+                      onClick={handlePlaceOrder}
+                      disabled={processing}
+                      className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                      id="place-order"
+                    >
+                      {processing ? (timeoutTriggered ? 'Still Processing...' : 'Processing...') : (gatewayError ? 'Retry Payment' : `Place Order — ${formatINR(total)}`)}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -335,16 +389,16 @@ export default function Checkout() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{item.name}</p>
-                      <p className="text-[11px] text-neutral-400">Size {item.size} × {item.quantity}</p>
+                      <p className="text-[11px] text-neutral-400">{item.sizeType || 'UK'} {item.size} × {item.quantity}</p>
                     </div>
-                    <p className="text-xs font-medium">{formatINR(item.price * item.quantity)}</p>
+                    <p className="text-xs font-medium">{formatINR(livePrice(item, state.products) * item.quantity)}</p>
                   </div>
                 ))}
               </div>
               <div className="divider mb-4" />
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between"><span className="text-neutral-500">Subtotal</span><span>{formatINR(subtotal)}</span></div>
-                {state.coupon && (
+                {state.coupon && discountOffset > 0 && (
                   <div className="flex justify-between text-green-600"><span className="font-medium">Discount ({state.coupon.code})</span><span>- {formatINR(discountOffset)}</span></div>
                 )}
                 <div className="flex justify-between"><span className="text-neutral-500">Shipping</span><span>{shipping === 0 ? 'Free' : formatINR(shipping)}</span></div>

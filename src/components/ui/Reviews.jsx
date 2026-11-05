@@ -26,17 +26,19 @@ export default function Reviews({ productId, user }) {
     }
   };
 
-  const syncProductStats = async (allReviewsForProduct) => {
+  // Only admins may write products, so the server recomputes the product's
+  // rating and review count from the reviews collection itself.
+  const syncProductStats = async () => {
     try {
-      const { doc, updateDoc } = await import('firebase/firestore');
-      const { db } = await import('../../firebase');
-      const totalReviews = allReviewsForProduct.length;
-      const newRating = totalReviews > 0 ? (allReviewsForProduct.reduce((acc, curr) => acc + curr.rating, 0) / totalReviews) : 0;
-      await updateDoc(doc(db, 'products', productId), {
-         reviews: totalReviews,
-         rating: newRating
+      const { auth } = await import('../../firebase');
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) return;
+      await fetch('/api/reviews/sync-stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        body: JSON.stringify({ productId }),
       });
-    } catch(e) {
+    } catch (e) {
       console.error('Failed to sync product stats', e);
     }
   };
@@ -50,7 +52,7 @@ export default function Reviews({ productId, user }) {
 
     setLoading(true);
     try {
-      const { collection, addDoc, doc, updateDoc } = await import('firebase/firestore');
+      const { doc, setDoc, updateDoc } = await import('firebase/firestore');
       const { db } = await import('../../firebase');
       
       let newReviewsArray = [...reviews];
@@ -67,12 +69,15 @@ export default function Reviews({ productId, user }) {
           comment, 
           createdAt: new Date().toISOString() 
         };
-        const docRef = await addDoc(collection(db, 'reviews'), reviewData);
-        newReviewsArray.push({ ...reviewData, _id: docRef.id });
+        // One review per customer per product: the ID is fixed, and
+        // firestore.rules only allows creating it under your own uid.
+        const reviewId = `${productId}_${reviewData.user}`;
+        await setDoc(doc(db, 'reviews', reviewId), reviewData);
+        newReviewsArray.push({ ...reviewData, _id: reviewId });
         toast.success('Review added', { style: { fontSize: '13px' } });
       }
       
-      await syncProductStats(newReviewsArray);
+      await syncProductStats();
 
       setEditingId(null);
       setComment('');
@@ -93,8 +98,7 @@ export default function Reviews({ productId, user }) {
         const { db } = await import('../../firebase');
         await deleteDoc(doc(db, 'reviews', reviewId));
         
-        const newReviewsArray = reviews.filter(r => r._id !== reviewId);
-        await syncProductStats(newReviewsArray);
+        await syncProductStats();
 
         toast.success('Review removed', { style: { fontSize: '13px' } });
         fetchReviews();
@@ -155,13 +159,13 @@ export default function Reviews({ productId, user }) {
               
               <div>
                 <label className="text-xs text-neutral-400 mb-2 block">Rating</label>
-                <div className="flex gap-1">
+                <div className="flex gap-1 -ml-2">
                   {[1, 2, 3, 4, 5].map(num => (
                     <button
                       key={num}
                       type="button"
                       onClick={() => setRating(num)}
-                      className={`text-lg ${num <= rating ? 'text-neutral-900' : 'text-neutral-300'}`}
+                      className={`min-w-[40px] min-h-[40px] text-lg ${num <= rating ? 'text-neutral-900' : 'text-neutral-300'}`}
                     >
                       ★
                     </button>
@@ -172,6 +176,7 @@ export default function Reviews({ productId, user }) {
               <div>
                 <label className="text-xs text-neutral-400 mb-1.5 block">Comment *</label>
                 <textarea
+                  maxLength={2000}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   className="input-field h-24 resize-none"
@@ -217,11 +222,11 @@ export default function Reviews({ productId, user }) {
                   {review.comment}
                 </p>
                 {user && (user._id === review.user || user.id === review.user || user.role === 'admin') && (
-                  <div className="flex gap-3 text-[10px] uppercase tracking-widest font-medium">
+                  <div className="flex gap-4 text-xs uppercase tracking-widest font-medium -ml-1">
                     {(user._id === review.user || user.id === review.user) && (
-                      <button onClick={() => handleEditInit(review)} className="text-neutral-400 hover:text-neutral-900 transition-base">Edit</button>
+                      <button onClick={() => handleEditInit(review)} className="py-2 px-1 text-neutral-400 hover:text-neutral-900 transition-base">Edit</button>
                     )}
-                    <button onClick={() => handleDelete(review._id)} className="text-red-400 hover:text-red-500 transition-base">Delete</button>
+                    <button onClick={() => handleDelete(review._id)} className="py-2 px-1 text-red-400 hover:text-red-500 transition-base">Delete</button>
                   </div>
                 )}
               </div>

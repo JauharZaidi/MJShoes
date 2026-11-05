@@ -25,3 +25,10 @@ server/.env
 *.njsproj
 *.sln
 *.sw?
+
+# Local env variants (examples stay committed)
+.env.*
+!.env.example
+server/.env.*
+!server/.env.example
+*service-account*.json

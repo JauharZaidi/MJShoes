@@ -22,7 +22,7 @@ async function seedCoupons() {
     },
     {
       code: 'MJ500',
-      discountType: 'flat',
+      discountType: 'fixed',
       value: 500,
       minOrderValue: 5000,
       usageLimit: 50,

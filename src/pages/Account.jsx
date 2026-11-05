@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { HiOutlineLogout, HiOutlineHeart, HiOutlineClipboardList, HiOutlineCog } from 'react-icons/hi';
+import Seo from '../components/Seo';
 
 export default function Account() {
   const { state, dispatch } = useStore();
@@ -9,6 +10,7 @@ export default function Account() {
   if (!state.user) {
     return (
       <main className="pt-16">
+        <Seo title="My Account" path="/account" noindex />
         <div className="container-main py-20 text-center">
           <h2 className="text-2xl font-light tracking-tight mb-4">Please sign in</h2>
           <Link to="/login" className="btn-primary text-xs">Sign In</Link>
@@ -32,6 +34,7 @@ export default function Account() {
 
   return (
     <main className="pt-16">
+      <Seo title="My Account" path="/account" noindex />
       <div className="container-main py-12 md:py-16 max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-10">
           <div>
@@ -52,7 +55,7 @@ export default function Account() {
           <div className="border border-neutral-100 p-6">
             <HiOutlineClipboardList className="w-5 h-5 text-neutral-400 mb-3" />
             <h3 className="text-sm font-medium mb-1">Orders</h3>
-            <p className="text-xs text-neutral-400">{state.orders.length} orders</p>
+            <p className="text-xs text-neutral-400">{state.orders.length} order{state.orders.length === 1 ? '' : 's'}</p>
           </div>
           {state.user.role === 'admin' && (
             <Link to="/admin" className="border border-neutral-900 p-6 hover:bg-neutral-50 transition-base">
@@ -107,12 +110,12 @@ export default function Account() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium">₹{Number(order.total).toLocaleString('en-IN')}</p>
-                      <p className="text-[11px] text-green-600 capitalize">{order.status}</p>
+                      <p className={`text-[11px] capitalize ${order.status === 'cancelled' ? 'text-red-500' : 'text-green-600'}`}>{order.status}</p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 overflow-x-auto">
                     {order.items.map(item => (
-                      <div key={`${item.id}-${item.size}`} className="w-10 h-10 bg-neutral-50">
+                      <div key={`${item.product || item.id}-${item.size}`} className="w-10 h-10 flex-shrink-0 bg-neutral-50">
                         <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                       </div>
                     ))}

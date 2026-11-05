@@ -19,6 +19,10 @@ import SizeGuide from './pages/SizeGuide';
 import ShippingReturns from './pages/ShippingReturns';
 import Contact from './pages/Contact';
 import FAQ from './pages/FAQ';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import Terms from './pages/Terms';
+import TrackOrder from './pages/TrackOrder';
+import NotFound from './pages/NotFound';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -49,6 +53,10 @@ export default function App() {
             <Route path="/shipping-returns" element={<ShippingReturns />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/faq" element={<FAQ />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/track-order" element={<TrackOrder />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />
           <Toaster

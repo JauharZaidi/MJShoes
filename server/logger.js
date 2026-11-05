@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 import AlertTransport from './alert-transport.js';
+import { getTraceContext } from './trace.js';
 
 const logDir = 'logs';
 
@@ -11,7 +12,21 @@ if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir);
 }
 
+const traceFormat = winston.format((info) => {
+  const context = getTraceContext();
+  if (context) {
+    info.traceId = context.traceId;
+    info.uid = context.uid;
+    info.route = context.route;
+    
+    // Explicitly modify the format explicitly for terminal readability mapping
+    info.message = `[Trace: ${context.traceId.slice(0,8)}] [UID: ${context.uid}] [Route: ${context.route}] ${info.message}`;
+  }
+  return info;
+});
+
 const customFormat = winston.format.combine(
+  traceFormat(),
   winston.format.timestamp({
     format: 'YYYY-MM-DD HH:mm:ss'
   }),

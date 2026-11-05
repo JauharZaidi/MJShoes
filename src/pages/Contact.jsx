@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import Seo from '../components/Seo';
 
 export default function Contact() {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
@@ -40,6 +41,11 @@ export default function Contact() {
 
   return (
     <main className="pt-24 pb-16 min-h-[80vh]">
+      <Seo
+        title="Contact Us"
+        path="/contact"
+        description="Get in touch with MJ Shoes support for order help or general inquiries."
+      />
       <div className="container-main max-w-xl">
         <h1 className="text-3xl font-light tracking-tight mb-4">Contact Us</h1>
         <p className="text-neutral-500 mb-10 leading-relaxed">

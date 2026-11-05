@@ -32,8 +32,9 @@ export default function Navbar() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-neutral-100" id="main-nav">
         <div className="container-main">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="text-lg font-medium tracking-tight" id="brand-logo">
-              MJ Store
+            <Link to="/" className="flex items-center gap-2 text-lg font-medium tracking-tight" id="brand-logo">
+              <img src="/logo.png" alt="MJ Shoes Logo" className="h-10 w-auto invert mix-blend-multiply" />
+              MJ Shoes
             </Link>
 
             <nav className="hidden md:flex items-center gap-10" aria-label="Main Navigation">

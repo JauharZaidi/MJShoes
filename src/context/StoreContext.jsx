@@ -1,7 +1,18 @@
 import { createContext, useContext, useReducer, useEffect } from 'react';
-import toast from 'react-hot-toast';
 
 const StoreContext = createContext();
+
+// Survives a refresh within the tab, but not a new visit — the server
+// re-validates the code at checkout anyway.
+const savedCoupon = () => {
+  try { return JSON.parse(sessionStorage.getItem('mj-coupon') || 'null'); } catch { return null; }
+};
+const saveCoupon = (coupon) => {
+  try {
+    if (coupon) sessionStorage.setItem('mj-coupon', JSON.stringify(coupon));
+    else sessionStorage.removeItem('mj-coupon');
+  } catch { /* storage unavailable — coupon just won't survive a refresh */ }
+};
 
 const initialState = {
   products: [],
@@ -12,7 +23,7 @@ const initialState = {
   notifications: [],
   searchQuery: '',
   selectedCategory: 'all',
-  coupon: null, // { code: string, discount: number }
+  coupon: savedCoupon(), // { code, discountType, value, minOrderValue }
   loading: true,
 };
 
@@ -26,12 +37,12 @@ function storeReducer(state, action) {
 
     case 'ADD_TO_CART': {
       const existing = state.cart.find(
-        item => item.id === action.payload.id && item.size === action.payload.size
+        item => item.id === action.payload.id && item.size === action.payload.size && item.sizeType === action.payload.sizeType
       );
       let newCart;
       if (existing) {
         newCart = state.cart.map(item =>
-          item.id === action.payload.id && item.size === action.payload.size
+          item.id === action.payload.id && item.size === action.payload.size && item.sizeType === action.payload.sizeType
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
@@ -85,6 +96,8 @@ function storeReducer(state, action) {
     }
 
     case 'PLACE_ORDER': {
+      saveCoupon(null);
+      localStorage.setItem('mj-cart', '[]');
       const newOrders = [action.payload, ...state.orders];
       return { ...state, orders: newOrders, cart: [], coupon: null };
     }
@@ -108,6 +121,7 @@ function storeReducer(state, action) {
     }
 
     case 'SET_COUPON': {
+      saveCoupon(action.payload);
       return { ...state, coupon: action.payload };
     }
 
@@ -117,7 +131,7 @@ function storeReducer(state, action) {
 
     case 'UPDATE_PRODUCT_STOCK': {
       const updatedProducts = state.products.map(p =>
-        p._id === action.payload.id
+        p.id === action.payload.id
           ? { ...p, stock: action.payload.stock }
           : p
       );
@@ -127,17 +141,17 @@ function storeReducer(state, action) {
     case 'ADD_PRODUCT': {
       return { ...state, products: [...state.products, action.payload] };
     }
-    
+
     case 'DELETE_PRODUCT': {
       return {
         ...state,
-        products: state.products.filter(p => p._id !== action.payload),
+        products: state.products.filter(p => p.id !== action.payload),
       };
     }
 
     case 'EDIT_PRODUCT': {
       const updatedProducts = state.products.map(p =>
-        p._id === action.payload._id ? { ...p, ...action.payload } : p
+        p.id === action.payload.id ? { ...p, ...action.payload } : p
       );
       return { ...state, products: updatedProducts };
     }
@@ -161,6 +175,7 @@ export function StoreProvider({ children }) {
         dispatch({ type: 'SET_PRODUCTS', payload: products });
       } catch (error) {
         console.error('Failed to fetch products', error);
+        dispatch({ type: 'SET_PRODUCTS', payload: [] });
       }
     };
     fetchData();

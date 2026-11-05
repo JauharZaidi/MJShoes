@@ -2,14 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="MJ Store — Premium handcrafted footwear for everyday excellence. Timeless design, trusted quality." />
+    <!--
+      Per-page title/description/robots/canonical/og:*/twitter:* are rendered by
+      src/components/Seo.jsx on every route (React 19 hoists <title>/<meta>/<link>
+      rendered in the tree into <head>). Do NOT add static duplicates of those
+      tags here — the previous version did, and browsers/crawlers ended up with
+      two of each (the static one here plus React's), with the static one
+      winning for everything except <title>. Only page-INDEPENDENT tags belong
+      in this file.
+    -->
+    <meta name="keywords" content="shoes, premium footwear, sneakers, MJ Shoes, online shopping, buy shoes online" />
+    <meta name="author" content="MJ Shoes" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MJ Shoes" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#ffffff" />
-    <title>MJ Store — Crafted for Everyday Excellence</title>
+    <title>MJ Shoes — Crafted for Everyday Excellence</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "MJ Shoes",
+        "url": "https://mjshoes.xyz",
+        "logo": "https://mjshoes.xyz/logo.png",
+        "sameAs": []
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

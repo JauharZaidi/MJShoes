@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HiOutlineChevronDown } from 'react-icons/hi';
+import Seo from '../components/Seo';
 
 const faqs = [
   {
@@ -33,6 +34,11 @@ export default function FAQ() {
 
   return (
     <main className="pt-24 pb-16 min-h-[80vh]">
+      <Seo
+        title="FAQs"
+        path="/faq"
+        description="Answers to frequently asked questions about orders, shipping, returns, and sizing at MJ Shoes."
+      />
       <div className="container-main max-w-3xl">
         <h1 className="text-3xl font-light tracking-tight mb-8">Frequently Asked Questions</h1>
         

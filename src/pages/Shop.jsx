@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import ProductCard from '../components/ui/ProductCard';
+import Seo from '../components/Seo';
+import { isAvailable } from '../utils/pricing';
 
 export default function Shop() {
   const { state } = useStore();
@@ -16,7 +18,7 @@ export default function Shop() {
   const categories = ['all', 'sneakers', 'casual', 'sports', 'limited'];
 
   const filtered = useMemo(() => {
-    let result = [...state.products];
+    let result = state.products.filter(isAvailable);
 
     if (category !== 'all') {
       result = result.filter(p => p.category === category);
@@ -42,11 +44,16 @@ export default function Shop() {
 
   return (
     <main className="pt-16">
+      <Seo
+        title="Shop All Shoes"
+        path="/shop"
+        description="Browse our full collection of premium handcrafted sneakers, casual shoes, and sports shoes. Free shipping on orders above ₹15,000."
+      />
       <div className="container-main py-12 md:py-16">
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-3xl sm:text-4xl font-light tracking-tight mb-2">Shop</h1>
-          <p className="text-sm text-neutral-400">{filtered.length} products</p>
+          <p className="text-sm text-neutral-400">{filtered.length} product{filtered.length === 1 ? '' : 's'}</p>
         </div>
 
         {/* Filters */}
@@ -56,7 +63,7 @@ export default function Shop() {
               <button
                 key={cat}
                 onClick={() => setCategory(cat)}
-                className={`px-4 py-2 text-xs uppercase tracking-widest transition-base ${
+                className={`px-4 py-2.5 text-xs uppercase tracking-widest transition-base ${
                   category === cat
                     ? 'bg-neutral-900 text-white'
                     : 'bg-transparent text-neutral-400 hover:text-neutral-900'
@@ -68,19 +75,19 @@ export default function Shop() {
             ))}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search..."
-              className="input-field text-xs w-40 py-2.5"
+              className="input-field text-xs w-full sm:w-40 py-2.5"
               id="shop-search"
             />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="input-field text-xs py-2.5 w-36 appearance-none cursor-pointer"
+              className="input-field text-xs py-2.5 w-full sm:w-36 appearance-none cursor-pointer"
               id="shop-sort"
             >
               <option value="featured">Featured</option>

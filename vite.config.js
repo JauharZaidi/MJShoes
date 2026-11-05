@@ -7,7 +7,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:5001',
+        // API_PORT lets the dev proxy follow the backend if 5001 is taken.
+        target: `http://localhost:${process.env.API_PORT || 5001}`,
         changeOrigin: true,
         secure: false,
       },

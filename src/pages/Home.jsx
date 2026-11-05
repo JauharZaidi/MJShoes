@@ -2,14 +2,26 @@ import { Link } from 'react-router-dom';
 import { testimonials } from '../data/products';
 import { useStore } from '../context/StoreContext';
 import ProductCard from '../components/ui/ProductCard';
+import Seo from '../components/Seo';
 import { HiArrowRight, HiOutlineShieldCheck, HiOutlineTruck, HiOutlineRefresh } from 'react-icons/hi';
+import { isAvailable } from '../utils/pricing';
 
 export default function Home() {
   const { state } = useStore();
-  const featured = state.products?.filter(p => p.featured).slice(0, 4) || [];
+  // Products ticked "Show on home page" in Admin; until any are, show the newest.
+  const live = state.products?.filter(isAvailable) || [];
+  const picked = live.filter(p => p.featured);
+  const featured = (picked.length > 0
+    ? picked
+    : [...live].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+  ).slice(0, 4);
 
   return (
     <main className="pt-16">
+      <Seo
+        path="/"
+        description="MJ Shoes — Premium handcrafted footwear for everyday excellence. Shop our collection of premium, stylish, and comfortable shoes."
+      />
       {/* Hero */}
       <section className="bg-neutral-50" id="hero">
         <div className="container-main py-20 md:py-28 lg:py-36">
@@ -35,7 +47,7 @@ export default function Home() {
             <div className="fade-in">
               <img
                 src="/images/shoe-white.png"
-                alt="MJ Store premium sneaker"
+                alt="MJ Shoes premium sneaker"
                 className="w-full max-w-lg mx-auto"
               />
             </div>
@@ -96,7 +108,7 @@ export default function Home() {
             <div>
               <img
                 src="/images/shoe-brown.png"
-                alt="MJ Store craftsmanship"
+                alt="MJ Shoes craftsmanship"
                 className="w-full max-w-md mx-auto"
               />
             </div>
@@ -107,7 +119,7 @@ export default function Home() {
               </h2>
               <div className="space-y-4 text-neutral-500 text-sm leading-relaxed">
                 <p>
-                  At MJ Store, we believe great shoes do not need to shout. They speak through 
+                  At MJ Shoes, we believe great shoes do not need to shout. They speak through 
                   quality — in the feel of the leather, the precision of every stitch, and the 
                   comfort that lasts year after year.
                 </p>

@@ -1,18 +1,24 @@
 import { Link } from 'react-router-dom';
 import { HiArrowRight } from 'react-icons/hi';
+import Seo from '../components/Seo';
 
 export default function About() {
   return (
     <main className="pt-16">
+      <Seo
+        title="About Us"
+        path="/about"
+        description="Learn about MJ Shoes — honest, handcrafted footwear made with quality materials and simple, thoughtful design."
+      />
       {/* Intro */}
       <section className="container-main py-20 md:py-28">
         <div className="max-w-2xl">
-          <p className="section-label mb-4">About MJ Store</p>
+          <p className="section-label mb-4">About MJ Shoes</p>
           <h1 className="text-4xl sm:text-5xl font-light tracking-tight mb-6 leading-[1.1]">
             Honest Shoes,<br />Made Simply Well
           </h1>
           <p className="text-neutral-500 leading-relaxed">
-            We started MJ Store with a simple belief: great shoes do not need to be complicated. 
+            We started MJ Shoes with a simple belief: great shoes do not need to be complicated. 
             No unnecessary embellishments, no trend-chasing — just carefully chosen materials, 
             thoughtful design, and the kind of quality that speaks for itself.
           </p>
@@ -24,7 +30,7 @@ export default function About() {
         <div className="container-main py-20 md:py-28">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
-              <img src="/images/shoe-brown.png" alt="MJ Store craftsmanship" className="w-full max-w-md" />
+              <img src="/images/shoe-brown.png" alt="MJ Shoes craftsmanship" className="w-full max-w-md" />
             </div>
             <div>
               <h2 className="text-3xl font-light tracking-tight mb-6">Materials Matter</h2>

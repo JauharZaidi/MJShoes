@@ -50,7 +50,7 @@ export default function ProductCard({ product }) {
 
         <button
           onClick={toggleWishlist}
-          className="mt-0.5 text-neutral-300 hover:text-neutral-900 transition-base"
+          className="min-w-[40px] min-h-[40px] -m-2 flex items-center justify-center text-neutral-300 hover:text-neutral-900 transition-base"
           aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           id={`wishlist-toggle-${product.id}`}
         >

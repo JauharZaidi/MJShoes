@@ -2,27 +2,37 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Products: anyone can read, only admin can write
-    match /products/{productId} {
-      allow read: if true;
-      allow write: if request.auth != null
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
-    // Users: can read/write own doc
+    // Products: anyone can read, only admin can write
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Users: own doc only. `role` can never be set or changed from the client —
+    // signup must create it as "user", and later edits must leave it untouched.
+    // Promote admins from the Firebase console / Admin SDK only.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if signedIn() && request.auth.uid == userId
+        && request.resource.data.role == "user";
+      allow update: if signedIn() && request.auth.uid == userId
+        && request.resource.data.role == resource.data.role;
     }
 
     // Orders: read own orders or admin, NO frontend creation (server handles this)
     match /orders/{orderId} {
-      allow read: if request.auth != null
-        && (resource.data.userId == request.auth.uid
-        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin");
-      allow update: if request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+      allow read: if signedIn()
+        && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
       // create and delete are NOT allowed from frontend — server uses Admin SDK
     }
 
@@ -31,13 +41,37 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Reviews: anyone can read, authenticated can create, owner can edit/delete
+    // Coupons: admin only. Customers validate codes through /api/coupons/validate
+    // (Admin SDK), so public read would only leak every code.
+    match /coupons/{couponId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Contact queries: no frontend access (server-only via Admin SDK)
+    match /contact_queries/{queryId} {
+      allow read, write: if false;
+    }
+
+    // Reviews: anyone can read; signed-in users create reviews under their own
+    // uid only, with a 1–5 rating; owner edits rating/comment only; owner or
+    // admin can delete.
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null
-        && (resource.data.user == request.auth.uid
-        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin");
+      allow create: if signedIn()
+        && request.resource.data.user == request.auth.uid
+        && reviewId == request.resource.data.product + "_" + request.auth.uid
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() <= 2000;
+      allow update: if signedIn() && resource.data.user == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["rating", "comment"])
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() <= 2000;
+      allow delete: if signedIn()
+        && (resource.data.user == request.auth.uid || isAdmin());
     }
   }
 }

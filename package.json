@@ -1,5 +1,5 @@
 {
-  "name": "mj-store",
+  "name": "mj-shoes",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "emulators": "JAVA_HOME=/opt/homebrew/opt/openjdk@21 PATH=/opt/homebrew/opt/openjdk@21/bin:$PATH firebase emulators:start --only auth,firestore",
+    "dev:emulators": "VITE_USE_EMULATORS=true API_PORT=5002 vite --port 5188 --strictPort",
+    "server:emulators": "cd server && PORT=5002 FRONTEND_URL=http://localhost:5188 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 node index.js"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -30,6 +33,7 @@
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "firebase-tools": "^15.33.0",
     "globals": "^17.4.0",
     "postcss": "^8.5.10",
     "tailwindcss": "^3.4.19",
